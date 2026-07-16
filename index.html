@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Property investment calculators, rental appraisal and property management health check by Teagan Turner, Ray White Springfield.">
+  <title>Property Investor Hub | Teagan Turner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="#home"><img src="assets/ray-white-logo.png" alt="Ray White"></a>
+  <button class="nav-toggle" aria-label="Open navigation">☰</button>
+  <nav class="main-nav">
+    <a href="#tools">Investor tools</a><a href="#analysis">Property analysis</a><a href="#appraisal">Rental appraisal</a><a href="#health">PM health check</a><a href="#about">About Teagan</a>
+  </nav>
+  <a class="header-cta" href="#appraisal">Get a rental estimate</a>
+</header>
+
+<main>
+<section id="home" class="hero">
+  <div class="hero-copy">
+    <span class="eyebrow">Ray White Springfield · Investor Resource</span>
+    <h1>Make clearer property decisions with better numbers.</h1>
+    <p>Analyse cash flow, yield, growth, equity, depreciation and capital gains—then request a personalised rental appraisal or property management second opinion.</p>
+    <div class="hero-actions"><a class="btn yellow" href="#analysis">Analyse a property</a><a class="btn outline" href="#tools">Explore investor tools</a></div>
+    <div class="hero-trust"><span>Local market knowledge</span><span>Investor-focused advice</span><span>Free online tools</span></div>
+  </div>
+  <div class="hero-image" role="img" aria-label="Modern outdoor entertaining area and pool"></div>
+</section>
+
+<section id="tools" class="section shell">
+  <div class="section-head"><span class="eyebrow">Investor toolkit</span><h2>Choose the calculation you need</h2><p>Use a quick calculator or complete the full property analysis for a broader view of the investment.</p></div>
+  <div class="tool-grid">
+    <a class="tool-card" href="#analysis"><span>01</span><h3>Property Analysis</h3><p>Purchase costs, finance, cash flow, yield, growth, equity and long-term position.</p></a>
+    <button class="tool-card" data-open="yield"><span>02</span><h3>Rental Yield</h3><p>Compare gross and estimated net yield after annual expenses.</p></button>
+    <button class="tool-card" data-open="growth"><span>03</span><h3>Future Property Value</h3><p>Model long-term capital growth using compound annual growth.</p></button>
+    <button class="tool-card" data-open="equity"><span>04</span><h3>Equity Position</h3><p>Estimate current equity and usable equity at a selected lending threshold.</p></button>
+    <button class="tool-card" data-open="depreciation"><span>05</span><h3>Depreciation</h3><p>Broadly estimate capital works and owner-purchased asset deductions.</p></button>
+    <button class="tool-card" data-open="cgt"><span>06</span><h3>Capital Gains</h3><p>Estimate gross capital gain, taxable gain and indicative tax effect.</p></button>
+    <button class="tool-card" data-open="vacancy"><span>07</span><h3>Vacancy vs Fee</h3><p>See whether a lower fee still costs more when vacancy is longer.</p></button>
+    <a class="tool-card" href="#health"><span>08</span><h3>PM Health Check</h3><p>Assess whether your current property management is proactive or reactive.</p></a>
+  </div>
+</section>
+
+<section id="analysis" class="section analysis-section">
+  <div class="shell">
+    <div class="section-head light"><span class="eyebrow">Flagship calculator</span><h2>Property Investment Analysis</h2><p>Complete each section to estimate acquisition costs, finance position, annual cash flow, yield and future equity.</p></div>
+    <form id="analysisForm" class="analysis-card">
+      <div class="stepper"><button type="button" class="step active" data-step="1">1 Purchase</button><button type="button" class="step" data-step="2">2 Finance</button><button type="button" class="step" data-step="3">3 Rental</button><button type="button" class="step" data-step="4">4 Expenses</button><button type="button" class="step" data-step="5">5 Growth</button></div>
+      <div class="step-panel active" data-panel="1"><h3>Purchase and upfront costs</h3><div class="form-grid">
+        <label>Purchase price<input id="pPurchase" type="number" min="0" placeholder="$"></label>
+        <label>Deposit / cash contribution<input id="pDeposit" type="number" min="0" placeholder="$"></label>
+        <label>Stamp duty<input id="pStamp" type="number" min="0" placeholder="$"></label>
+        <label>Legal / conveyancing<input id="pLegal" type="number" min="0" placeholder="$"></label>
+        <label>Building and pest<input id="pInspect" type="number" min="0" placeholder="$"></label>
+        <label>LMI<input id="pLmi" type="number" min="0" placeholder="$"></label>
+        <label>Other purchase costs<input id="pOtherBuy" type="number" min="0" placeholder="$"></label>
+      </div></div>
+      <div class="step-panel" data-panel="2"><h3>Finance</h3><div class="form-grid">
+        <label>Loan amount<input id="pLoan" type="number" min="0" placeholder="Leave blank to calculate"></label>
+        <label>Interest rate (%)<input id="pRate" type="number" min="0" step="0.01" placeholder="%"></label>
+        <label>Loan term (years)<input id="pTerm" type="number" min="1" placeholder="Years"></label>
+        <label>Loan type<select id="pLoanType"><option value="pi">Principal & interest</option><option value="io">Interest only</option></select></label>
+        <label>Offset balance<input id="pOffset" type="number" min="0" placeholder="$"></label>
+      </div></div>
+      <div class="step-panel" data-panel="3"><h3>Rental income</h3><div class="form-grid">
+        <label>Weekly rent<input id="pRent" type="number" min="0" placeholder="$ per week"></label>
+        <label>Vacancy allowance (weeks)<input id="pVacancy" type="number" min="0" step="0.5" placeholder="Weeks"></label>
+        <label>Ray White management fee (%)<input id="pMgmt" type="number" min="0" step="0.1" value="8.8"></label>
+        <label>Letting fee (weeks of rent)<input id="pLetting" type="number" min="0" step="0.1" placeholder="Weeks"></label>
+        <label>Other annual income<input id="pOtherIncome" type="number" min="0" placeholder="$"></label>
+      </div></div>
+      <div class="step-panel" data-panel="4"><h3>Annual expenses</h3><div class="form-grid">
+        <label>Council rates<input id="pRates" type="number" min="0" placeholder="$ per year"></label>
+        <label>Water / utilities<input id="pWater" type="number" min="0" placeholder="$ per year"></label>
+        <label>Landlord insurance<input id="pInsurance" type="number" min="0" placeholder="$ per year"></label>
+        <label>Body corporate<input id="pBody" type="number" min="0" placeholder="$ per year"></label>
+        <label>Maintenance allowance<input id="pMaint" type="number" min="0" placeholder="$ per year"></label>
+        <label>Land tax<input id="pLandTax" type="number" min="0" placeholder="$ per year"></label>
+        <label>Accounting / other costs<input id="pOtherCost" type="number" min="0" placeholder="$ per year"></label>
+        <label>Estimated annual depreciation<input id="pDep" type="number" min="0" placeholder="$ per year"></label>
+        <label>Marginal tax rate (%)<input id="pTax" type="number" min="0" max="60" step="0.1" placeholder="%"></label>
+      </div></div>
+      <div class="step-panel" data-panel="5"><h3>Long-term assumptions</h3><div class="form-grid">
+        <label>Annual property growth (%)<input id="pGrowth" type="number" min="0" step="0.1" value="7"></label>
+        <label>Annual rental growth (%)<input id="pRentGrowth" type="number" min="0" step="0.1" value="5"></label>
+        <label>CPI / inflation (%)<input id="pCpi" type="number" min="0" step="0.1" value="3"></label>
+        <label>Projection period (years)<input id="pYears" type="number" min="1" placeholder="Years"></label>
+      </div></div>
+      <div class="analysis-actions"><button type="button" class="btn subtle" id="prevStep">Previous</button><button type="button" class="btn yellow" id="nextStep">Next</button><button type="submit" class="btn dark" id="calculateAnalysis">Calculate analysis</button></div>
+    </form>
+    <section id="analysisResult" class="results-panel hidden">
+      <div class="result-heading"><div><span class="eyebrow">Analysis complete</span><h3>Your estimated investment position</h3></div><button class="btn subtle" onclick="window.print()">Print / save PDF</button></div>
+      <div class="metrics" id="analysisMetrics"></div>
+      <div class="result-columns"><div class="breakdown"><h4>Annual cash-flow breakdown</h4><div id="cashBreakdown"></div></div><div class="breakdown"><h4>Long-term projection</h4><div id="futureBreakdown"></div></div></div>
+      <p class="disclaimer">Indicative only. This calculator does not constitute financial, tax, credit or investment advice. Confirm lending, taxation, purchasing costs and property-specific assumptions with appropriately qualified advisers.</p>
+    </section>
+  </div>
+</section>
+
+<section id="appraisal" class="section shell split-section">
+  <div><span class="eyebrow">Lead-generating rental tool</span><h2>Indicative Rental Appraisal</h2><p>Enter the property details to receive a broad automated market summary. Your contact details are required before the indicative range is shown so Teagan can review the property and follow up with a formal appraisal.</p><ul class="feature-list"><li>Property-feature assessment</li><li>Generic local-market commentary</li><li>Indicative rental range</li><li>Personal review by Teagan</li></ul></div>
+  <form id="appraisalForm" class="form-card">
+    <div class="form-grid">
+      <label class="full">Property address<input id="aAddress" required placeholder="Street address, suburb and postcode"></label>
+      <label>Property type<select id="aType"><option>House</option><option>Townhouse</option><option>Unit / Apartment</option><option>Duplex</option><option>Acreage</option><option>Dual living</option></select></label>
+      <label>Bedrooms<input id="aBeds" type="number" min="0" placeholder=""></label><label>Bathrooms<input id="aBaths" type="number" min="0" placeholder=""></label><label>Car spaces<input id="aCars" type="number" min="0" placeholder=""></label>
+      <label>Land size (m²)<input id="aLand" type="number" min="0" placeholder=""></label>
+      <label>Condition<select id="aCondition"><option value="10">New / near new</option><option value="5">Modern and well presented</option><option value="0" selected>Average condition</option><option value="-15">Dated but tidy</option><option value="-30">Requires improvement</option></select></label>
+      <fieldset class="full checks"><legend>Features</legend><label><input type="checkbox" data-rent-adjust="15"> Ducted air conditioning</label><label><input type="checkbox" data-rent-adjust="10"> Solar</label><label><input type="checkbox" data-rent-adjust="15"> Media room</label><label><input type="checkbox" data-rent-adjust="25"> Pool</label><label><input type="checkbox" data-rent-adjust="15"> Shed</label><label><input type="checkbox" data-rent-adjust="25"> Dual living</label></fieldset>
+    </div>
+    <button class="btn yellow full-btn" type="submit">Analyse property</button>
+  </form>
+</section>
+<section id="appraisalPreview" class="section shell hidden"><div class="analysis-message"><span class="eyebrow">Automated property review</span><h3>Your property profile has been analysed</h3><p id="aCommentary"></p><button class="btn yellow" id="openAppraisalGate">Unlock indicative rent range</button></div></section>
+
+<section id="health" class="section health-section"><div class="shell split-section"><div><span class="eyebrow">Two-minute scorecard</span><h2>Is your property manager costing you money?</h2><p>Answer 15 questions across communication, rent reviews, maintenance, vacancy and investment guidance.</p><img src="assets/front-door.jpg" alt="Welcoming home entry"></div><form id="healthForm" class="form-card"><div id="healthQuestions"></div><button type="submit" class="btn yellow full-btn">Calculate my score</button><p id="healthError" class="error"></p></form></div></section>
+
+<section id="about" class="section shell about-section"><div class="about-image"><img src="assets/whole-team.png" alt="Ray White Springfield team"></div><div><span class="eyebrow">Your local investment contact</span><h2>Teagan Turner</h2><h3>Business Development Manager</h3><p>Teagan is known for a proactive, organised approach, strong communication and a focus on helping landlords minimise vacancy, attract quality tenants and make informed property decisions.</p><div class="contact-list"><a href="tel:0481229960">0481 229 960</a><a href="mailto:teagan.turner@raywhite.com">teagan.turner@raywhite.com</a><span>Ray White Springfield · Shop P4–P5, Springfield Fair, 16 Springfield Parkway, Springfield QLD 4300</span></div></div></section>
+</main>
+
+<div class="modal hidden" id="toolModal" role="dialog" aria-modal="true"><div class="modal-card"><button class="modal-close" aria-label="Close">×</button><div id="modalContent"></div></div></div>
+<div class="modal hidden" id="leadModal" role="dialog" aria-modal="true"><div class="modal-card lead-card"><button class="modal-close" aria-label="Close">×</button><span class="eyebrow">Unlock your result</span><h2 id="leadTitle">Your result is ready</h2><p>Enter your details to view the result. Teagan will receive your enquiry and may contact you to provide a more detailed review.</p><form id="leadForm"><input type="hidden" id="leadType"><div class="form-grid"><label>Name<input id="leadName" required></label><label>Email<input id="leadEmail" type="email" required></label><label>Mobile<input id="leadPhone" type="tel" required></label><label class="full">Property address<input id="leadAddress"></label></div><button class="btn yellow full-btn" type="submit">Show my result</button><p id="leadStatus"></p></form></div></div>
+
+<footer><div class="shell footer-grid"><img src="assets/ray-white-logo.png" alt="Ray White"><div><strong>Teagan Turner</strong><br>Business Development Manager<br>Ray White Springfield</div><div><a href="tel:0481229960">0481 229 960</a><br><a href="mailto:teagan.turner@raywhite.com">teagan.turner@raywhite.com</a></div></div></footer>
+<script src="app.js"></script>
+</body></html>
