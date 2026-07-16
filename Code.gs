@@ -1,4 +1,150 @@
-const SHEET_ID='1Z00BH3fW1UT01nH8-687LzfyBddMaPbfFj0009GF84E';
-const SHEET_NAME='Leads';
-const NOTIFICATION_EMAIL='teagan.turner@raywhite.com';
-function doPost(e){try{const d=JSON.parse(e.postData.contents||'{}');if(!d.name||!d.email||!d.phone)throw new Error('Name, email and phone are required.');const ss=SpreadsheetApp.openById(SHEET_ID);let sh=ss.getSheetByName(SHEET_NAME);if(!sh){sh=ss.insertSheet(SHEET_NAME);sh.appendRow(['Date','Name','Email','Phone','Address','Help Type','Source','Page','Calculator Results','Scorecard','Notes']);}sh.appendRow([new Date(),d.name||'',d.email||'',d.phone||'',d.address||'',d.helpType||'',d.source||'',d.page||'',JSON.stringify(d.results||[]),JSON.stringify(d.scorecard||{}),d.notes||'']);MailApp.sendEmail({to:NOTIFICATION_EMAIL,subject:`New Investor Hub Lead: ${d.name} — ${d.helpType||'Website enquiry'}`,body:`Name: ${d.name}\nEmail: ${d.email}\nPhone: ${d.phone}\nProperty: ${d.address||'Not provided'}\nEnquiry: ${d.helpType||''}\n\nResults:\n${JSON.stringify(d.results||[],null,2)}\n\nPage: ${d.page||''}`,replyTo:d.email,name:'Teagan Turner Investor Hub'});MailApp.sendEmail({to:d.email,subject:'Your Property Investor Hub enquiry has been received',body:`Hi ${d.name},\n\nThank you for using the Property Investor Hub. Your enquiry has been received and I will review the information provided.\n\nKind regards,\n\nTeagan Turner\nBusiness Development Manager\nRay White Springfield\n0481 229 960`});return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON)}catch(err){return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.message})).setMimeType(ContentService.MimeType.JSON)}}
+const SHEET_ID = '1Z00BH3fW1UT01nH8-687LzfyBddMaPbfFj0009GF84E';
+const SHEET_NAME = 'Leads';
+const NOTIFICATION_EMAIL = 'teagan.turner@raywhite.com';
+
+function doGet() {
+  return ContentService
+    .createTextOutput('Teagan Investor Hub backend is connected.')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error('No website submission was received.');
+    }
+
+    const data = JSON.parse(e.postData.contents);
+
+    if (!data.name || !data.email || !data.phone) {
+      throw new Error('Name, email and phone are required.');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(SHEET_NAME);
+    }
+
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'Date',
+        'Name',
+        'Email',
+        'Phone',
+        'Address',
+        'Help Type',
+        'Source',
+        'Page',
+        'Calculator Results',
+        'Scorecard',
+        'Notes'
+      ]);
+    }
+
+    sheet.appendRow([
+      new Date(),
+      data.name || '',
+      data.email || '',
+      data.phone || '',
+      data.address || '',
+      data.helpType || '',
+      data.source || 'Property Investor Hub',
+      data.page || '',
+      JSON.stringify(data.results || []),
+      JSON.stringify(data.scorecard || {}),
+      data.notes || ''
+    ]);
+
+    SpreadsheetApp.flush();
+
+    MailApp.sendEmail({
+      to: NOTIFICATION_EMAIL,
+      replyTo: data.email,
+      name: 'Teagan Turner Investor Hub',
+      subject: `New Investor Hub Lead: ${data.name}`,
+      body:
+        `Name: ${data.name}\n` +
+        `Email: ${data.email}\n` +
+        `Phone: ${data.phone}\n` +
+        `Property: ${data.address || 'Not provided'}\n` +
+        `Enquiry: ${data.helpType || 'Website enquiry'}\n\n` +
+        `Results:\n${JSON.stringify(data.results || [], null, 2)}\n\n` +
+        `Website page: ${data.page || ''}`
+    });
+
+    MailApp.sendEmail({
+      to: data.email,
+      subject: 'Your Property Investor Hub enquiry has been received',
+      body:
+        `Hi ${data.name},\n\n` +
+        `Thank you for using the Property Investor Hub. I have received your details and will review the information provided.\n\n` +
+        `Kind regards,\n\n` +
+        `Teagan Turner\n` +
+        `Investment Property Consultant\n` +
+        `Ray White Springfield\n` +
+        `0481 229 960`
+    });
+
+    return jsonResponse({
+      ok: true,
+      message: 'Lead saved successfully.'
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return jsonResponse({
+      ok: false,
+      error: error.message
+    });
+  }
+}
+
+function testSheetConnection() {
+  const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'Date',
+      'Name',
+      'Email',
+      'Phone',
+      'Address',
+      'Help Type',
+      'Source',
+      'Page',
+      'Calculator Results',
+      'Scorecard',
+      'Notes'
+    ]);
+  }
+
+  sheet.appendRow([
+    new Date(),
+    'Website connection test',
+    'teagan.turner@raywhite.com',
+    '0481 229 960',
+    '',
+    'Apps Script Test',
+    'Manual test',
+    '',
+    '',
+    '',
+    'If this row appears, Apps Script is connected to the correct sheet.'
+  ]);
+
+  SpreadsheetApp.flush();
+}
+
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
