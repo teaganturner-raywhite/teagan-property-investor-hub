@@ -1,0 +1,10 @@
+IMPORTANT — upload every file in this folder to the ROOT of the GitHub repository.
+
+The website now deliberately uses new filenames:
+- app-v3.js
+- styles-v3.css
+
+This prevents the old app.js or styles.css from being cached or mixed with the new index.html.
+
+After upload, confirm the repository root contains index.html, app-v3.js, styles-v3.css and all image files.
+You may delete the old app.js and styles.css from GitHub after the new version is working.
