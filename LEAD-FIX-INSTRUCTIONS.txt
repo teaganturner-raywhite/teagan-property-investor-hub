@@ -1,0 +1,29 @@
+GOOGLE SHEETS LEAD FIX
+
+1. Open your Google Sheet.
+2. Go to Extensions > Apps Script.
+3. Replace everything in Code.gs with the supplied Code.gs file.
+4. Save.
+5. Deploy > Manage deployments > Edit.
+6. Choose New version.
+7. Execute as: Me.
+8. Who has access: Anyone.
+9. Deploy.
+
+TEST THE BACKEND
+Open this address in a browser:
+https://script.google.com/macros/s/AKfycby9_e3PN9uKRp5W4Q74tZ2ib-iI6TL2_wkNpI14M2wfmC852f2TybZv53gsTPeuUNzVzQ/exec?action=test
+
+It should show:
+{"ok":true,"message":"Test row added to the Leads sheet."}
+
+Then check the Leads tab for a row named Website connection test.
+
+GITHUB
+Upload all files from this folder to the root of your GitHub repository.
+The important files are:
+index.html
+styles-v3.css
+app-v4.js
+
+Wait 2–5 minutes and hard-refresh the live site with Ctrl+F5.

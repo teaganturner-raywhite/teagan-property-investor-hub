@@ -1,0 +1,145 @@
+const BACKEND_URL='https://script.google.com/macros/s/AKfycby9_e3PN9uKRp5W4Q74tZ2ib-iI6TL2_wkNpI14M2wfmC852f2TybZv53gsTPeuUNzVzQ/exec';
+const SHEET_ID='1Z00BH3fW1UT01nH8-687LzfyBddMaPbfFj0009GF84E';
+const $=id=>document.getElementById(id); const val=id=>Number($(id)?.value)||0; const money=n=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:0}).format(Number(n)||0); const pct=n=>(Number(n)||0).toFixed(2)+'%';
+
+document.querySelector('.nav-toggle').onclick=()=>document.querySelector('.main-nav').classList.toggle('open');
+document.querySelectorAll('.main-nav a').forEach(a=>a.onclick=()=>document.querySelector('.main-nav').classList.remove('open'));
+
+let currentStep=1; const setStep=n=>{currentStep=Math.max(1,Math.min(5,n));document.querySelectorAll('.step').forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===currentStep));document.querySelectorAll('.step-panel').forEach(x=>x.classList.toggle('active',Number(x.dataset.panel)===currentStep));$('prevStep').style.visibility=currentStep===1?'hidden':'visible';$('nextStep').style.display=currentStep===5?'none':'inline-flex';$('calculateAnalysis').style.display=currentStep===5?'inline-flex':'none'};
+document.querySelectorAll('.step').forEach(b=>b.onclick=()=>setStep(Number(b.dataset.step)));$('prevStep').onclick=()=>setStep(currentStep-1);$('nextStep').onclick=()=>setStep(currentStep+1);setStep(1);
+
+function loanPayment(principal,annualRate,years){const r=annualRate/100/12,n=years*12;if(!principal||!years)return 0;if(!r)return principal/n;return principal*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1)}
+function loanBalance(principal,annualRate,years,paymentsMade){const r=annualRate/100/12,n=years*12,p=Math.min(paymentsMade,n);if(!principal)return 0;if(!r)return Math.max(0,principal-(principal/n)*p);const pay=loanPayment(principal,annualRate,years);return Math.max(0,principal*Math.pow(1+r,p)-pay*(Math.pow(1+r,p)-1)/r)}
+function metric(label,value){return `<div class="metric"><small>${label}</small><strong>${value}</strong></div>`}
+function line(label,value){return `<div class="line-item"><span>${label}</span><strong>${value}</strong></div>`}
+
+let investmentChart=null;
+function buildProjection(inputs){
+  const rows=[];
+  const baseOtherExpenses=inputs.rates+inputs.water+inputs.insurance+inputs.body+inputs.maint+inputs.landTax+inputs.otherCost;
+  for(let year=1;year<=50;year++){
+    const propertyValue=inputs.purchase*Math.pow(1+inputs.growth,year);
+    const weeklyRent=inputs.weeklyRent*Math.pow(1+inputs.rentGrowth,year);
+    const annualGross=weeklyRent*52+inputs.otherIncome*Math.pow(1+inputs.cpi,year);
+    const vacancy=weeklyRent*inputs.vacancyWeeks;
+    const collected=Math.max(0,annualGross-vacancy);
+    const management=collected*inputs.managementRate;
+    const letting=weeklyRent*inputs.lettingWeeks;
+    const inflatedOther=baseOtherExpenses*Math.pow(1+inputs.cpi,year);
+    const operatingExpenses=management+letting+inflatedOther;
+    const remainingLoan=inputs.loanType==='io'?inputs.loan:loanBalance(inputs.effectiveLoan,inputs.rate,inputs.term,year*12);
+    const annualDebt=inputs.loanType==='io'?inputs.effectiveLoan*inputs.rate/100:(year<=inputs.term?loanPayment(inputs.effectiveLoan,inputs.rate,inputs.term)*12:0);
+    const passiveIncome=collected-operatingExpenses-annualDebt;
+    rows.push({year,propertyValue,weeklyRent,annualGross,operatingExpenses,annualDebt,loanBalance:remainingLoan,passiveIncome,equity:propertyValue-remainingLoan});
+  }
+  return rows;
+}
+function renderProjection(rows){
+  $('projectionTableBody').innerHTML=rows.map(r=>`<tr><td>Year ${r.year}</td><td>${money(r.propertyValue)}</td><td>${money(r.weeklyRent)}</td><td>${money(r.annualGross)}</td><td>${money(r.operatingExpenses)}</td><td>${money(r.annualDebt)}</td><td>${money(r.loanBalance)}</td><td class="${r.passiveIncome>=0?'passive-positive':'passive-negative'}">${money(r.passiveIncome)}</td><td>${money(r.equity)}</td></tr>`).join('');
+  if(typeof Chart==='undefined')return;
+  if(investmentChart)investmentChart.destroy();
+  investmentChart=new Chart($('investmentChart'),{type:'line',data:{labels:rows.map(r=>r.year),datasets:[
+    {label:'Property value',data:rows.map(r=>r.propertyValue),yAxisID:'wealth',borderWidth:3,pointRadius:0,tension:.18},
+    {label:'Loan balance',data:rows.map(r=>r.loanBalance),yAxisID:'wealth',borderWidth:3,pointRadius:0,tension:.18},
+    {label:'Annual rent',data:rows.map(r=>r.annualGross),yAxisID:'income',borderWidth:3,pointRadius:0,tension:.18}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${money(c.raw)}`}}},scales:{x:{title:{display:true,text:'Year'}},wealth:{type:'linear',position:'left',title:{display:true,text:'Property value and loan'},ticks:{callback:v=>'$'+Intl.NumberFormat('en-AU',{notation:'compact'}).format(v)}},income:{type:'linear',position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Annual rental income'},ticks:{callback:v=>'$'+Intl.NumberFormat('en-AU',{notation:'compact'}).format(v)}}}}});
+  document.querySelectorAll('.chart-toggle').forEach((button,index)=>{button.onclick=()=>{button.classList.toggle('active');investmentChart.setDatasetVisibility(index,button.classList.contains('active'));investmentChart.update()}});
+}
+
+$('analysisForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const purchase=val('pPurchase'),deposit=val('pDeposit'),buyCosts=val('pStamp')+val('pLegal')+val('pInspect')+val('pLmi')+val('pOtherBuy');
+  const loan=val('pLoan')||Math.max(0,purchase-deposit+val('pLmi'));
+  const rate=val('pRate'),term=val('pTerm'),offset=val('pOffset'),effectiveLoan=Math.max(0,loan-offset);
+  const annualDebt=$('pLoanType').value==='io'?effectiveLoan*rate/100:loanPayment(effectiveLoan,rate,term)*12;
+  const annualGross=val('pRent')*52+val('pOtherIncome'),vacancy=val('pRent')*val('pVacancy'),collected=Math.max(0,annualGross-vacancy),mgmt=collected*val('pMgmt')/100,letting=val('pRent')*val('pLetting');
+  const nonFinance=mgmt+letting+val('pRates')+val('pWater')+val('pInsurance')+val('pBody')+val('pMaint')+val('pLandTax')+val('pOtherCost');
+  const preTax=collected-nonFinance-annualDebt,taxable=collected-nonFinance-annualDebt-val('pDep'),taxEffect=Math.max(0,-taxable)*val('pTax')/100,afterTax=preTax+taxEffect;
+  const cashRequired=deposit+buyCosts,grossYield=purchase?annualGross/purchase*100:0,netYield=purchase?(collected-nonFinance)/purchase*100:0,lvr=purchase?loan/purchase*100:0;
+  const years=Math.min(50,Math.max(1,val('pYears')||30)),futureValue=purchase*Math.pow(1+val('pGrowth')/100,years),futureRent=val('pRent')*Math.pow(1+val('pRentGrowth')/100,years);
+  const futureLoan=$('pLoanType').value==='io'?loan:loanBalance(effectiveLoan,rate,term,years*12),futureEquity=futureValue-futureLoan,roc=cashRequired?afterTax/cashRequired*100:0;
+  $('analysisMetrics').innerHTML=[metric('Estimated loan',money(loan)),metric('LVR',pct(lvr)),metric('Weekly holding position',money(afterTax/52)),metric('Annual after-tax cash flow',money(afterTax)),metric('Gross rental yield',pct(grossYield)),metric('Estimated net yield',pct(netYield)),metric(`Projected value in ${years} years`,money(futureValue)),metric('Projected equity',money(futureEquity)),metric('Cash required',money(cashRequired)),metric('Return on cash invested',pct(roc)),metric('Future weekly rent',money(futureRent)),metric('Projected loan balance',money(futureLoan))].join('');
+  $('cashBreakdown').innerHTML=line('Gross annual income',money(annualGross))+line('Vacancy allowance',`-${money(vacancy)}`)+line('Management fees',`-${money(mgmt)}`)+line('Other operating expenses',`-${money(nonFinance-mgmt)}`)+line('Loan repayments / interest',`-${money(annualDebt)}`)+line('Estimated tax benefit',money(taxEffect))+line('After-tax position',money(afterTax));
+  $('futureBreakdown').innerHTML=line('Starting property value',money(purchase))+line('Annual property growth',pct(val('pGrowth')))+line('Annual rental growth',pct(val('pRentGrowth')))+line('CPI / inflation assumption',pct(val('pCpi')))+line('Future property value',money(futureValue))+line('Future loan balance',money(futureLoan))+line('Future equity',money(futureEquity));
+  const projection=buildProjection({purchase,loan,effectiveLoan,rate,term,loanType:$('pLoanType').value,weeklyRent:val('pRent'),vacancyWeeks:val('pVacancy'),managementRate:val('pMgmt')/100,lettingWeeks:val('pLetting'),otherIncome:val('pOtherIncome'),rates:val('pRates'),water:val('pWater'),insurance:val('pInsurance'),body:val('pBody'),maint:val('pMaint'),landTax:val('pLandTax'),otherCost:val('pOtherCost'),growth:val('pGrowth')/100,rentGrowth:val('pRentGrowth')/100,cpi:val('pCpi')/100});
+  renderProjection(projection);
+  $('analysisResult').classList.remove('hidden');$('analysisResult').scrollIntoView({behavior:'smooth'});
+});
+
+const toolModal=$('toolModal'),modalContent=$('modalContent');document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openTool(b.dataset.open));document.querySelectorAll('.modal-close').forEach(b=>b.onclick=()=>b.closest('.modal').classList.add('hidden'));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.add('hidden')}));
+function input(label,id,extra=''){return `<label>${label}<input id="${id}" type="number" min="0" ${extra}></label>`}
+function openTool(type){let html='';if(type==='yield')html=`<div class="tool-form"><span class="eyebrow">Investor tool</span><h2>Rental Yield Calculator</h2><div class="form-grid">${input('Property value / purchase price','mPrice','placeholder="$"')}${input('Weekly rent','mRent','placeholder="$"')}${input('Management fee (%)','mMgmt','value="8.8" step="0.1"')}${input('Vacancy (weeks)','mVac','placeholder="Weeks" step="0.5"')}${input('Council rates','mRates','placeholder="$ per year"')}${input('Insurance','mIns','placeholder="$ per year"')}${input('Body corporate','mBody','placeholder="$ per year"')}${input('Maintenance','mMaint','placeholder="$ per year"')}${input('Other expenses','mOther','placeholder="$ per year"')}</div><button class="btn yellow full-btn" onclick="calcTool('yield')">Calculate yield</button><div id="mResult"></div></div>`;
+if(type==='retirement')html=`<div class="tool-form"><span class="eyebrow">Reverse-engineered plan</span><h2>Retirement Planning</h2><p>Start with the passive income you want and work backwards to estimate the property portfolio required today.</p><div class="form-grid">${input('Desired passive income in today’s dollars','mTargetIncome','placeholder="$ per year"')}${input('Years until retirement','mRetireYears','placeholder="Years" max="50"')}${input('Expected net rental yield at retirement (%)','mRetireYield','placeholder="%" step="0.1"')}${input('Annual property growth (%)','mRetireGrowth','value="7" step="0.1"')}${input('Annual rental growth (%)','mRetireRentGrowth','value="5" step="0.1"')}${input('CPI / inflation (%)','mRetireCpi','value="3" step="0.1"')}${input('Typical property price today (optional)','mTypicalPrice','placeholder="$"')}</div><button class="btn yellow full-btn" onclick="calcTool('retirement')">Build my retirement target</button><div id="mResult"></div></div>`;
+if(type==='equity')html=`<div class="tool-form"><span class="eyebrow">Investor tool</span><h2>Equity Position</h2><div class="form-grid">${input('Current property value','mValue','placeholder="$"')}${input('Current loan balance','mLoan','placeholder="$"')}${input('Usable equity threshold (%)','mThreshold','value="80" step="1"')}</div><button class="btn yellow full-btn" onclick="calcTool('equity')">Calculate equity</button><div id="mResult"></div></div>`;
+if(type==='depreciation')html=`<div class="tool-form"><span class="eyebrow">Indicative only</span><h2>Depreciation Calculator</h2><div class="form-grid">${input('Construction year','mYear','placeholder="Year"')}${input('Original construction cost','mCost','placeholder="$"')}${input('Eligible renovations / improvements','mImprove','placeholder="$"')}${input('New plant and equipment purchased by you','mAssets','placeholder="$"')}${input('Marginal tax rate (%)','mTax','placeholder="%" step="0.1"')}</div><button class="btn yellow full-btn" onclick="calcTool('depreciation')">Estimate depreciation</button><div id="mResult"></div><p class="disclaimer">A qualified quantity surveyor must prepare a formal depreciation schedule. Eligibility depends on dates, ownership, asset type and current taxation law.</p></div>`;
+if(type==='cgt')html=`<div class="tool-form"><span class="eyebrow">Indicative only</span><h2>Estimated Capital Gains Calculator</h2><div class="form-grid">${input('Purchase price','mBuy','placeholder="$"')}${input('Sale price','mSell','placeholder="$"')}${input('Purchase costs','mBuyCosts','placeholder="$"')}${input('Capital improvements','mImprove','placeholder="$"')}${input('Selling costs','mSellCosts','placeholder="$"')}${input('Capital works deductions claimed','mDeductions','placeholder="$"')}${input('Ownership percentage (%)','mOwnership','placeholder="%"')}${input('Ownership period (months)','mMonths','placeholder="Months"')}${input('Capital losses','mLosses','placeholder="$"')}${input('Marginal tax rate (%)','mTax','placeholder="%" step="0.1"')}</div><button class="btn yellow full-btn" onclick="calcTool('cgt')">Estimate capital gain</button><div id="mResult"></div><p class="disclaimer">This is not a tax return calculation. Residency, entity type, main-residence use, cost-base adjustments and current law can materially change the result.</p></div>`;
+if(type==='vacancy')html=`<div class="tool-form"><span class="eyebrow">Fee versus performance</span><h2>Vacancy Cost Calculator</h2><p>Compare a lower-fee agency with a higher-fee agency that secures a tenant sooner.</p><div class="form-grid">${input('Weekly rent','mRent','placeholder="$"')}${input('Competitor management fee (%)','mCompFee','placeholder="%" step="0.1"')}${input('Competitor vacancy (weeks)','mCompVac','placeholder="Weeks" step="0.5"')}${input('Ray White management fee (%)','mRwFee','value="8.8" step="0.1"')}${input('Ray White vacancy (weeks)','mRwVac','placeholder="Weeks" step="0.5"')}</div><button class="btn yellow full-btn" onclick="calcTool('vacancy')">Compare annual position</button><div id="mResult"></div></div>`;modalContent.innerHTML=html;toolModal.classList.remove('hidden')}
+function mv(id){return Number(document.getElementById(id)?.value)||0}function calcTool(type){let out='';if(type==='yield'){const annual=mv('mRent')*52,vac=mv('mRent')*mv('mVac'),mgmt=(annual-vac)*mv('mMgmt')/100,expenses=vac+mgmt+mv('mRates')+mv('mIns')+mv('mBody')+mv('mMaint')+mv('mOther'),net=annual-expenses;out=`<div class="tool-result"><div class="metrics">${metric('Gross yield',pct(mv('mPrice')?annual/mv('mPrice')*100:0))}${metric('Estimated net yield',pct(mv('mPrice')?net/mv('mPrice')*100:0))}${metric('Net annual income',money(net))}${metric('Total annual expenses',money(expenses))}</div></div>`}
+if(type==='retirement'){const target=mv('mTargetIncome'),years=Math.min(50,mv('mRetireYears')),netYield=mv('mRetireYield')/100,growth=mv('mRetireGrowth')/100,cpi=mv('mRetireCpi')/100,typical=mv('mTypicalPrice');if(!target||!years||!netYield){out='<div class="tool-result"><p>Please enter your target income, years until retirement and expected net rental yield.</p></div>'}else{const futureIncome=target*Math.pow(1+cpi,years),futurePortfolio=futureIncome/netYield,todayPortfolio=futurePortfolio/Math.pow(1+growth,years),one=todayPortfolio,two=todayPortfolio/2,four=todayPortfolio/4,count=typical?Math.ceil(todayPortfolio/typical):0;out=`<div class="tool-result"><div class="metrics">${metric('Target income at retirement',money(futureIncome)+' p.a.')}${metric('Debt-free portfolio needed',money(futurePortfolio))}${metric('Equivalent property value today',money(todayPortfolio))}${metric('Target weekly passive income',money(futureIncome/52))}</div><div class="scenario-grid"><div class="scenario-card"><small>One-property pathway</small><strong>${money(one)}</strong><span>One property purchased around this value today, assuming the selected growth and debt-free ownership at retirement.</span></div><div class="scenario-card"><small>Two-property pathway</small><strong>${money(two)} each</strong><span>Two properties purchased around this value today.</span></div><div class="scenario-card"><small>Four-property pathway</small><strong>${money(four)} each</strong><span>Four properties purchased around this value today.</span></div><div class="scenario-card"><small>Your typical price</small><strong>${typical?count+' properties':'Add a price'}</strong><span>${typical?`Approximately ${count} properties at ${money(typical)} each today.`:'Enter a typical purchase price to estimate the number required.'}</span></div></div><div class="retirement-note"><strong>How to read this:</strong> the model inflates your desired income by CPI, divides it by your expected net rental yield, then discounts the required future portfolio value back using the selected property-growth rate. It assumes the portfolio is debt-free at retirement.</div></div>`}}
+if(type==='equity'){const equity=mv('mValue')-mv('mLoan'),usable=Math.max(0,mv('mValue')*mv('mThreshold')/100-mv('mLoan'));out=`<div class="tool-result"><div class="metrics">${metric('Current equity',money(equity))}${metric('Usable equity',money(usable))}${metric('Current LVR',pct(mv('mValue')?mv('mLoan')/mv('mValue')*100:0))}</div></div>`}
+if(type==='depreciation'){const year=mv('mYear'),age=Math.max(0,new Date().getFullYear()-year),remaining=Math.max(0,40-age),capital=remaining>0?(mv('mCost')+mv('mImprove'))*.025:0,assets=mv('mAssets')*.2,annual=capital+assets;out=`<div class="tool-result"><div class="metrics">${metric('Estimated annual deduction',money(annual))}${metric('Indicative tax effect',money(annual*mv('mTax')/100))}${metric('Broad five-year total',money(annual*5))}</div></div>`}
+if(type==='cgt'){const cost=mv('mBuy')+mv('mBuyCosts')+mv('mImprove')+mv('mSellCosts')-mv('mDeductions'),gross=Math.max(0,mv('mSell')-cost)*mv('mOwnership')/100,afterLoss=Math.max(0,gross-mv('mLosses')),taxable=afterLoss*(mv('mMonths')>=12?.5:1);out=`<div class="tool-result"><div class="metrics">${metric('Gross capital gain',money(gross))}${metric('Estimated taxable gain',money(taxable))}${metric('Indicative tax effect',money(taxable*mv('mTax')/100))}</div></div>`}
+if(type==='vacancy'){const rent=mv('mRent'),gross=rent*52,compVac=rent*mv('mCompVac'),rwVac=rent*mv('mRwVac'),compFees=(gross-compVac)*mv('mCompFee')/100,rwFees=(gross-rwVac)*mv('mRwFee')/100,compNet=gross-compVac-compFees,rwNet=gross-rwVac-rwFees,diff=rwNet-compNet;out=`<div class="tool-result"><div class="comparison"><div><h3>Competitor</h3>${line('Vacancy loss',money(compVac))}${line('Management fees',money(compFees))}${line('Income after vacancy and fees',money(compNet))}</div><div><h3>Ray White</h3>${line('Vacancy loss',money(rwVac))}${line('Management fees',money(rwFees))}${line('Income after vacancy and fees',money(rwNet))}</div></div><h3>${diff>=0?`The Ray White scenario is approximately ${money(diff)} stronger over the year.`:`The competitor scenario is approximately ${money(Math.abs(diff))} stronger over the year.`}</h3><p>Management fees are only one part of the annual outcome. Vacancy, rent achieved, tenant quality and management performance can materially affect the owner’s result.</p></div>`}document.getElementById('mResult').innerHTML=out}
+
+const suburbBases={springfield:650,'springfield lakes':670,'spring mountain':690,'augustine heights':680,brookwater:760,camira:650,goodna:560,'redbank plains':600,redbank:590,'collingwood park':620,ripley:650,'south ripley':660,greenbank:680,flagstone:590,yarrabilba:590,plainland:600,laidley:520,adare:650,ipswich:570,logan:610};let appraisalData=null,healthData=null;
+$('appraisalForm').addEventListener('submit',e=>{e.preventDefault();const address=$('aAddress').value.toLowerCase(),beds=val('aBeds'),type=$('aType').value;let base=620,known=false;Object.keys(suburbBases).sort((a,b)=>b.length-a.length).some(s=>{if(address.includes(s)){base=suburbBases[s];known=true;return true}});base+=(beds-4)*55;if(type.includes('Townhouse'))base-=35;if(type.includes('Unit'))base-=80;if(type.includes('Acreage'))base+=60;if(type.includes('Dual'))base+=120;base+=val('aCondition');document.querySelectorAll('[data-rent-adjust]:checked').forEach(x=>base+=Number(x.dataset.rentAdjust));if(val('aLand')>900)base+=20;const low=Math.round((base-25)/5)*5,high=Math.round((base+25)/5)*5;appraisalData={address:$('aAddress').value,type,beds,baths:val('aBaths'),cars:val('aCars'),low,high,known};$('aCommentary').textContent=`Based on the details supplied, this ${type.toLowerCase()} appears ${beds?`to provide ${beds} bedrooms and `:''}features that may appeal to the local tenant market. Presentation, exact location, current competing listings, affordability and recent leasing evidence can all affect the final recommendation. ${known?'The suburb is within the broad built-in local reference area.':'The address is outside the limited built-in reference area, so a manual comparable review is especially important.'}`;$('appraisalPreview').classList.remove('hidden');$('appraisalPreview').scrollIntoView({behavior:'smooth'})});$('openAppraisalGate').onclick=()=>openLead('Rental Appraisal',appraisalData?.address||'');
+
+const questions=[['Does your property manager respond within one business day?',['Always|2','Usually|1','Rarely|0']],['Do they personally explain routine inspection findings?',['Always|2','Sometimes|1','No|0']],['Do they contact you before lease expiry or other issues become urgent?',['Always|2','Sometimes|1','Never|0']],['Has your rent been reviewed in the past 12 months?',['Yes|2','Unsure|1','No|0']],['Do they provide comparable evidence for rent recommendations?',['Yes|2','Sometimes|1','No|0']],['Have they suggested improvements that could increase rent or tenant appeal?',['Yes|2','No|0']],['Are maintenance quotes challenged or compared when appropriate?',['Always|2','Sometimes|1','Never|0']],['Have they suggested preventative maintenance?',['Yes|2','No|0']],['Do they discuss options before approving expensive repairs?',['Yes|2','Sometimes|1','No|0']],['Would they have a clear marketing strategy if the property became vacant?',['Definitely|2','Probably|1','Unsure|0']],['Have they discussed reducing vacancy through pricing and presentation?',['Yes|2','No|0']],['Do they proactively manage arrears and lease compliance?',['Yes|2','Unsure|1','No|0']],['Have they explained recent Queensland legislation affecting the property?',['Yes|2','No|0']],['Have they suggested reviewing insurance or depreciation?',['Yes|2','No|0']],['Do they treat the property like an investment business rather than only collecting rent?',['Absolutely|2','Sometimes|1','No|0']]];
+$('healthQuestions').innerHTML=questions.map((q,i)=>`<div class="question"><p>${i+1}. ${q[0]}</p><div class="options">${q[1].map(o=>{const [t,v]=o.split('|');return `<label><input type="radio" name="q${i}" value="${v}"> ${t}</label>`}).join('')}</div></div>`).join('');$('healthForm').addEventListener('submit',e=>{e.preventDefault();const vals=[...new FormData(e.target).values()];if(vals.length<questions.length){$('healthError').textContent='Please answer all questions before calculating your score.';return}$('healthError').textContent='';const score=vals.reduce((a,b)=>a+Number(b),0);healthData={score};openLead('Property Management Health Check','')});
+
+function openLead(type,address){$('leadType').value=type;$('leadTitle').textContent=type==='Rental Appraisal'?'Your indicative rental range is ready':'Your property management score is ready';$('leadAddress').value=address;$('leadStatus').textContent='';$('leadModal').classList.remove('hidden')}
+$('leadForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+
+  const type=$('leadType').value;
+  const result=type==='Rental Appraisal'
+    ? {
+        indicativeRange:`${money(appraisalData.low)}–${money(appraisalData.high)} per week`,
+        property:appraisalData
+      }
+    : {
+        score:`${healthData.score}/30`,
+        rating:healthData.score>=27
+          ? 'Investment protected'
+          : healthData.score>=20
+            ? 'Room for improvement'
+            : healthData.score>=12
+              ? 'You may be leaving money on the table'
+              : 'Time for a second opinion'
+      };
+
+  const formData=new URLSearchParams({
+    name:$('leadName').value.trim(),
+    email:$('leadEmail').value.trim(),
+    phone:$('leadPhone').value.trim(),
+    address:$('leadAddress').value.trim(),
+    helpType:type,
+    source:'Property Investor Hub',
+    page:location.href,
+    results:JSON.stringify([result]),
+    scorecard:JSON.stringify(type.includes('Health')?result:{}),
+    notes:'Lead generated from website'
+  });
+
+  $('leadStatus').textContent='Submitting your details…';
+
+  try{
+    await fetch(BACKEND_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{
+        'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body:formData.toString()
+    });
+
+    // Google Apps Script returns an opaque response to browser requests.
+    // The submission is sent, while the on-page result is displayed immediately.
+    $('leadStatus').innerHTML=type==='Rental Appraisal'
+      ? `<div class="tool-result"><h3>Indicative rental range</h3><div class="metrics">${metric('Weekly range',`${money(appraisalData.low)}–${money(appraisalData.high)}`)}${metric('Annual rent range',`${money(appraisalData.low*52)}–${money(appraisalData.high*52)}`)}</div><p>This is a broad automated indication only. Teagan will review the property against current competition and recent comparable evidence before confirming a formal rental appraisal.</p><p class="submission-note">Your contact details have been submitted.</p></div>`
+      : `<div class="tool-result"><h3>${result.score} · ${result.rating}</h3><p>${healthData.score>=27?'Your management appears proactive. Continue requesting evidence-based reviews and strategy discussions.':healthData.score>=20?'There are areas where a more proactive approach may improve communication, income or risk management.':healthData.score>=12?'Several opportunities may be being missed. An independent rent and management review would be worthwhile.':'There are multiple warning signs. A second opinion may help identify immediate risks and opportunities.'}</p><p class="submission-note">Your contact details have been submitted.</p></div>`;
+  }catch(err){
+    console.error(err);
+    $('leadStatus').textContent='Your result is ready, but your contact details could not be submitted. Please call Teagan on 0481 229 960.';
+  }
+});
