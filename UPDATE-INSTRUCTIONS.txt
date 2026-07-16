@@ -1,0 +1,31 @@
+TEAGAN PROPERTY INVESTOR HUB — UPDATE PACKAGE
+
+This version includes:
+- Root-level image files to prevent broken GitHub Pages image paths
+- 50-year Property Analysis chart
+- Year-by-year table for years 1–50
+- Property value, weekly rent, annual rent, expenses, loan repayments, loan balance, passive income and equity
+- Retirement Planning calculator replacing Future Property Value
+- Existing Google Apps Script and Google Sheet integration
+
+UPLOAD TO GITHUB
+1. Unzip this package.
+2. Open the extracted folder.
+3. In your GitHub repository, select Add file > Upload files.
+4. Upload EVERY file inside this folder, including all JPG and PNG files.
+5. Allow index.html, styles.css and app.js to replace the existing files.
+6. Commit the changes.
+7. Wait 2–5 minutes, then open the live website and press Ctrl + F5.
+
+IMPORTANT IMAGE FIX
+The images are now stored beside index.html rather than inside an assets folder.
+Your repository should show files such as:
+- index.html
+- styles.css
+- app.js
+- pool.jpg
+- front-door.jpg
+- whole-team.png
+- ray-white-logo.png
+
+Do not upload only index.html, styles.css and app.js. The image files must also be uploaded.
